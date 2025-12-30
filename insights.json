@@ -1,0 +1,17 @@
+{
+  "Stake.com": {
+    "total_posts": 5,
+    "monthly_count": 2,
+    "bonus_count": 1,
+    "vip_count": 0,
+    "range_estimation": "$50–$110"
+  },
+  "Stake US": {
+    "total_posts": 5,
+    "monthly_count": 1,
+    "bonus_count": 0,
+    "vip_count": 1,
+    "range_estimation": "$30–$90"
+  },
+  "last_update": "2025-12-30T00:00:00Z"
+}

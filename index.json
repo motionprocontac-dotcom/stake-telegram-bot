@@ -1,0 +1,123 @@
+import fetch from 'node-fetch';
+
+// Variables d'environnement
+const BOT_TOKEN = process.env.BOT_TOKEN;
+const INSIGHTS_URL = process.env.INSIGHTS_URL;
+const BTC_WALLET = process.env.BTC_WALLET;
+const ETH_WALLET = process.env.ETH_WALLET;
+const LTC_WALLET = process.env.LTC_WALLET;
+const AFFILIATE = process.env.AFFILIATE;
+const CHANNEL = process.env.CHANNEL || "";
+
+// Helper pour envoyer un message Telegram
+async function sendTelegram(chat_id, text) {
+  const url = `https://api.telegram.org/bot${BOT_TOKEN}/sendMessage`;
+  await fetch(url, {
+    method: "POST",
+    headers: {"Content-Type": "application/json"},
+    body: JSON.stringify({
+      chat_id,
+      text,
+      parse_mode: "Markdown"
+    })
+  });
+}
+
+// Charger les données JSON pour Insights
+async function getInsights() {
+  try {
+    const res = await fetch(INSIGHTS_URL);
+    if (!res.ok) return {};
+    return await res.json();
+  } catch (e) {
+    return {};
+  }
+}
+
+// Menu principal
+function buildMainMenu(language = "en") {
+  if (language === "fr") {
+    return `*Menu Principal*
+1️⃣ Stake.com
+2️⃣ Stake US
+3️⃣ Insights
+4️⃣ Estimation Monthly
+5️⃣ Support`;
+  } else {
+    return `*Main Menu*
+1️⃣ Stake.com
+2️⃣ Stake US
+3️⃣ Insights
+4️⃣ Monthly Estimation
+5️⃣ Support`;
+  }
+}
+
+// Message Insights
+function buildInsightsMessage(data, language = "en") {
+  let msg = language === "fr" ? "*Dernières tendances*\n\n" : "*Latest Trends*\n\n";
+  for (const platform in data) {
+    const p = data[platform];
+    msg += `*${platform}*
+Posts: ${p.total_posts}
+Monthly: ${p.monthly_count}
+Bonus: ${p.bonus_count}
+VIP: ${p.vip_count}
+Estimation: ${p.range_estimation}\n\n`;
+  }
+  return msg;
+}
+
+// Message estimation placeholder
+function buildEstimationMessage(language = "en") {
+  return language === "fr"
+    ? "Pour estimer votre Monthly, utilisez vos stats et consultez les tendances dans Insights."
+    : "To estimate your Monthly, use your stats and check trends in Insights.";
+}
+
+// Gestion des commandes
+export default {
+  async fetch(req, env) {
+    if (req.method === "POST") {
+      const body = await req.json();
+      const chat_id = body.message?.chat?.id;
+      const text = body.message?.text || "";
+      const language = body.message?.from?.language_code === "fr" ? "fr" : "en";
+
+      if (!chat_id) return new Response("No chat_id", {status: 400});
+
+      if (text === "/start") {
+        if (CHANNEL) {
+          await sendTelegram(chat_id, language === "fr"
+            ? `Pour commencer, veuillez rejoindre notre canal: ${CHANNEL}`
+            : `Please join our channel first: ${CHANNEL}`
+          );
+        }
+        await sendTelegram(chat_id, buildMainMenu(language));
+      } else if (text.toLowerCase() === "1" || text.toLowerCase() === "stake.com") {
+        await sendTelegram(chat_id, language === "fr"
+          ? "Vous avez choisi *Stake.com*. Consultez Insights pour les dernières tendances."
+          : "You chose *Stake.com*. Check Insights for latest trends.");
+      } else if (text.toLowerCase() === "2" || text.toLowerCase() === "stake us") {
+        await sendTelegram(chat_id, language === "fr"
+          ? "Vous avez choisi *Stake US*. Consultez Insights pour les dernières tendances."
+          : "You chose *Stake US*. Check Insights for latest trends.");
+      } else if (text.toLowerCase() === "3" || text.toLowerCase() === "insights") {
+        const data = await getInsights();
+        await sendTelegram(chat_id, buildInsightsMessage(data, language));
+      } else if (text.toLowerCase() === "4" || text.toLowerCase() === "estimation monthly") {
+        await sendTelegram(chat_id, buildEstimationMessage(language));
+      } else if (text.toLowerCase() === "5" || text.toLowerCase() === "support") {
+        const supportMsg = language === "fr"
+          ? `Dons BTC: ${BTC_WALLET}\nETH: ${ETH_WALLET}\nLTC: ${LTC_WALLET}\nAffiliation: ${AFFILIATE}`
+          : `Donations BTC: ${BTC_WALLET}\nETH: ${ETH_WALLET}\nLTC: ${LTC_WALLET}\nAffiliate: ${AFFILIATE}`;
+        await sendTelegram(chat_id, supportMsg);
+      } else {
+        await sendTelegram(chat_id, buildMainMenu(language));
+      }
+
+      return new Response("OK");
+    }
+    return new Response("Method not allowed", {status: 405});
+  }
+};
